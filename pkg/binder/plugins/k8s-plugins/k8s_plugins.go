@@ -9,16 +9,14 @@ import (
 	"sync"
 
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	ksf "k8s.io/kube-scheduler/framework"
-	"k8s.io/kubernetes/pkg/features"
-	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 	k8splfeature "k8s.io/kubernetes/pkg/scheduler/framework/plugins/feature"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kai-scheduler/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
+	featuregates "github.com/kai-scheduler/KAI-scheduler/pkg/common/feature_gates"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/common/k8s_utils"
 
 	"github.com/kai-scheduler/KAI-scheduler/pkg/binder/plugins/k8s-plugins/common"
@@ -45,14 +43,13 @@ func New(
 	var k8sPlugins []common.K8sPlugin
 	k8sFramework := k8s_utils.NewFrameworkHandle(client, informerFactory, nil)
 	k8sFeatures := k8splfeature.Features{
-		// EnableVolumeCapacityPriority:    feature.DefaultFeatureGate.Enabled(features.VolumeCapacityPriority),
-		EnableDynamicResourceAllocation: feature.DefaultFeatureGate.Enabled(features.DynamicResourceAllocation),
+		EnableDynamicResourceAllocation: featuregates.DynamicResourcesEnabled(),
 	}
 
 	logger := log.Log.WithName("binder-plugins")
 	logger.Info("Feature flags", "features", k8sFeatures)
 
-	for _, initFunc := range []func(k8sframework.Handle, *k8splfeature.Features, int64) (common.K8sPlugin, error){
+	for _, initFunc := range []func(ksf.Handle, *k8splfeature.Features, int64) (common.K8sPlugin, error){
 		volumebinding.NewVolumeBindingPlugin,
 		dynamicresources.NewDynamicResourcesPlugin,
 	} {
